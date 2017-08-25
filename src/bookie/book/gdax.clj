@@ -2,28 +2,73 @@
   (:require [keychain.exchange.gdax :as gdax]
             [clojure.core.async :as a]))
 
-(defn add-book-entry
-  [book {:keys [product_id order_id] :as entry}]
-  (cond
-    (= "match" (:type entry)) (swap! book update-in [product_id :matches] #(conj % entry))
-    :else (swap! book update-in [product_id order_id] #(conj % entry))))
+(defn ->bids-xf
+  [sequence-number]
+  (map
+    (fn [[price size id :as order]]
+      {:product_id "ETH-USD"
+       :type "open"
+       :side "buy"
+       :sequence sequence-number
+       :price (read-string price)
+       :remaining_size (read-string size)
+       :order_id id})))
 
-(defn create-realtime-orderbook
-  [products & {:keys [] :as opt}]
-  (let [{:keys [feed close] :as subscription} (gdax/subscribe products :buffer-size 1000)
-        book (atom {})]
+(defn ->asks-xf
+  [sequence-number]
+  (map
+    (fn [[price size id :as order]]
+      {:product_id "ETH-USD"
+       :type "open"
+       :side "sell"
+       :sequence sequence-number
+       :price (read-string price)
+       :remaining_size (read-string size)
+       :order_id id})))
 
+(defn add-event
+  [book {:keys [sequence type side product_id order_id] :as order}]
+  (case type
+    "match" (swap! book update-in [product_id :matches] #(conj % order))
+    (swap! book update-in [product_id side order_id] #(conj % order))))
+
+(defn start-order-book-maintainer
+  [order-book subscription start-sequence add-fn]
+  (let [feed (:feed subscription)]
     (a/go-loop
-      [x (a/<! feed)]
-      (when x
-        (add-book-entry book x)
-        (recur (a/<! feed))))
+      [[timestamp event :as m] (a/<! feed)
+       previous-sequence start-sequence]
+      (when m
+        (let [current-sequence (:sequence event)]
+          (when (> current-sequence previous-sequence)
+              (add-fn order-book event))
+          (recur (a/<! feed) current-sequence))))))
 
-    {:book book, :close close}))
+(defn load-snapshot
+  [book {:keys [sequence bids asks] :as snapshot} add-fn]
+  (let [bids-xf (->bids-xf sequence)
+        asks-xf (->asks-xf sequence)]
+    (doseq [order (flatten [(transduce bids-xf conj bids)
+                            (transduce asks-xf conj asks)])]
+      (add-fn book order))))
 
-(defn get-orders
-  [snapshot product filter-fn]
-  (into {} (filter filter-fn (get snapshot product))))
+(defn get-snapshot
+  [client product]
+  (gdax/get-product-order-book client product :level 3))
+
+(defn create-order-book
+  [product]
+  (let [order-book (atom {})
+        subscription (gdax/subscribe [product])
+        snapshot (get-snapshot (gdax/get-client) product)
+        _ (load-snapshot order-book snapshot add-event)
+        _ (start-order-book-maintainer order-book subscription (:sequence snapshot) add-event)
+        errored (a/chan)
+        closed (a/chan)]
+    {:order-book order-book
+     :errored (a/pipe (:errored subscription) errored)
+     :closed (a/pipe (:closed subscription) closed)
+     :close (:close subscription)}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Snapshot Operations ;;;;
@@ -56,18 +101,12 @@
 (defn B
   "Open bid limit orders."
   [snapshot product]
-  (->> (get-orders
-         snapshot
-         product
-         open-buy-order?)))
+  (filter open? (get-in snapshot [product "buy"])))
 
 (defn A
   "Open ask limit orders."
   [snapshot product]
-  (->> (get-orders
-         snapshot
-         product
-         open-sell-order?)))
+  (filter open? (get-in snapshot [product "sell"])))
 
 (defn get-price
   [order]
@@ -107,12 +146,11 @@
 (defn nxpt*
   "General function for nbpt and napt."
   [side-fn snapshot product price]
-  (->> (side-fn snapshot product)
-       (filter #(= price (get-price %)))
-       (map val)
-       (map first)
-       (map #(or (:size %) (:remaining_size %)))
-       (reduce +)))
+  (let [xf (comp (filter #(= price (get-price %)))
+                 (map val)
+                 (map first)
+                 (map #(or (:size %) (:remaining_size %))))]
+    (transduce xf + (side-fn snapshot product))))
 
 (defn nbpt
   "Current bid-side depth at a given price."

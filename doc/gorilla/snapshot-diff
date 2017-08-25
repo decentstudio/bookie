@@ -1,0 +1,67 @@
+;; gorilla-repl.fileformat = 1
+
+;; **
+;;; # Gorilla REPL
+;;; 
+;;; Welcome to gorilla :-)
+;;; 
+;;; Shift + enter evaluates code. Hit alt+g twice in quick succession or click the menu icon (upper-right corner) for more commands ...
+;;; 
+;;; It's a good habit to run each worksheet in its own namespace: feel free to use the declaration we've provided below if you'd like.
+;; **
+
+;; @@
+(ns arrogant-silence
+  (:require [gorilla-plot.core :as plot]
+            [keychain.exchange.gdax :as gdax]
+            [clojure.set :as s]))
+;; @@
+
+;; @@
+(def ->bids-xf
+  (map 
+    (fn [[price size id :as order]]
+      {:product_id "ETH-USD"
+       :type "open"
+       :side "buy"
+       :price price 
+       :remaining_size size
+       :order_id id})))
+
+(def ->asks-xf
+  (map 
+    (fn [[price size id :as order]]
+      {:product_id "ETH-USD"
+       :type "open"
+       :side "sell"
+       :price price
+       :remaining_size size 
+       :order_id id})))
+;; @@
+
+;; @@
+(def S1 (gdax/get-product-order-book (gdax/get-client) "ETH-USD" :level 3))
+;; @@
+
+;; @@
+(def S2 (gdax/get-product-order-book (gdax/get-client) "ETH-USD" :level 3))
+;; @@
+
+;; @@
+(defn combine-unique 
+  [buy-xf sell-xf s]
+  (into #{}
+        (concat (transduce sell-xf conj (:asks s))
+                (transduce buy-xf conj (:bids s)))))
+;; @@
+
+;; @@
+(clojure.pprint/pprint (s/difference (combine-unique ->bids-xf ->asks-xf S2) (combine-unique ->bids-xf ->asks-xf S1)))
+;; @@
+
+;; @@
+(filter #(= (:order_id %) "1c4c37a4-d441-49a0-bad5-ffc26de52bc4") (combine-unique ->bids-xf ->asks-xf S2))
+;; @@
+;; =>
+;;; {"type":"list-like","open":"<span class='clj-lazy-seq'>(</span>","close":"<span class='clj-lazy-seq'>)</span>","separator":" ","items":[{"type":"list-like","open":"<span class='clj-map'>{</span>","close":"<span class='clj-map'>}</span>","separator":", ","items":[{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:product_id</span>","value":":product_id"},{"type":"html","content":"<span class='clj-string'>&quot;ETH-USD&quot;</span>","value":"\"ETH-USD\""}],"value":"[:product_id \"ETH-USD\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:type</span>","value":":type"},{"type":"html","content":"<span class='clj-string'>&quot;open&quot;</span>","value":"\"open\""}],"value":"[:type \"open\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:side</span>","value":":side"},{"type":"html","content":"<span class='clj-string'>&quot;sell&quot;</span>","value":"\"sell\""}],"value":"[:side \"sell\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:price</span>","value":":price"},{"type":"html","content":"<span class='clj-string'>&quot;319.77&quot;</span>","value":"\"319.77\""}],"value":"[:price \"319.77\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:remaining_size</span>","value":":remaining_size"},{"type":"html","content":"<span class='clj-string'>&quot;0.02&quot;</span>","value":"\"0.02\""}],"value":"[:remaining_size \"0.02\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:order_id</span>","value":":order_id"},{"type":"html","content":"<span class='clj-string'>&quot;1c4c37a4-d441-49a0-bad5-ffc26de52bc4&quot;</span>","value":"\"1c4c37a4-d441-49a0-bad5-ffc26de52bc4\""}],"value":"[:order_id \"1c4c37a4-d441-49a0-bad5-ffc26de52bc4\"]"}],"value":"{:product_id \"ETH-USD\", :type \"open\", :side \"sell\", :price \"319.77\", :remaining_size \"0.02\", :order_id \"1c4c37a4-d441-49a0-bad5-ffc26de52bc4\"}"}],"value":"({:product_id \"ETH-USD\", :type \"open\", :side \"sell\", :price \"319.77\", :remaining_size \"0.02\", :order_id \"1c4c37a4-d441-49a0-bad5-ffc26de52bc4\"})"}
+;; <=

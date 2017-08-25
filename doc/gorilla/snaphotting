@@ -1,0 +1,87 @@
+;; gorilla-repl.fileformat = 1
+
+;; **
+;;; # Gorilla REPL
+;;;
+;;; Welcome to gorilla :-)
+;;;
+;;; Shift + enter evaluates code. Hit alt+g twice in quick succession or click the menu icon (upper-right corner) for more commands ...
+;;;
+;;; It's a good habit to run each worksheet in its own namespace: feel free to use the declaration we've provided below if you'd like.
+;; **
+
+;; @@
+(ns limitless-oasis
+  (:require [gorilla-plot.core :as plot]
+            [keychain.exchange.gdax :as gdax]))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-nil'>nil</span>","value":"nil"}
+;; <=
+
+;; @@
+(def gdax-client (gdax/get-client))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-var'>#&#x27;limitless-oasis/gdax-client</span>","value":"#'limitless-oasis/gdax-client"}
+;; <=
+
+;; @@
+gdax-client
+;; @@
+;; =>
+;;; {"type":"list-like","open":"<span class='clj-map'>{</span>","close":"<span class='clj-map'>}</span>","separator":", ","items":[{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:credentials</span>","value":":credentials"},{"type":"list-like","open":"<span class='clj-map'>{</span>","close":"<span class='clj-map'>}</span>","separator":", ","items":[{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:access-key</span>","value":":access-key"},{"type":"html","content":"<span class='clj-string'>&quot;26c44545d711214302c859ef9eb6e70d&quot;</span>","value":"\"26c44545d711214302c859ef9eb6e70d\""}],"value":"[:access-key \"26c44545d711214302c859ef9eb6e70d\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:access-secret</span>","value":":access-secret"},{"type":"html","content":"<span class='clj-string'>&quot;D6CisvAYgkCvc2xwCdnKg6wDR3ExRo/xWF2UGp3uDFwHzHPmhRwaYFbIxNXiCtAXgBMhH5t7dU59Hjxzfdg60w==&quot;</span>","value":"\"D6CisvAYgkCvc2xwCdnKg6wDR3ExRo/xWF2UGp3uDFwHzHPmhRwaYFbIxNXiCtAXgBMhH5t7dU59Hjxzfdg60w==\""}],"value":"[:access-secret \"D6CisvAYgkCvc2xwCdnKg6wDR3ExRo/xWF2UGp3uDFwHzHPmhRwaYFbIxNXiCtAXgBMhH5t7dU59Hjxzfdg60w==\"]"},{"type":"list-like","open":"","close":"","separator":" ","items":[{"type":"html","content":"<span class='clj-keyword'>:access-passphrase</span>","value":":access-passphrase"},{"type":"html","content":"<span class='clj-string'>&quot;grm72izkyu6&quot;</span>","value":"\"grm72izkyu6\""}],"value":"[:access-passphrase \"grm72izkyu6\"]"}],"value":"{:access-key \"26c44545d711214302c859ef9eb6e70d\", :access-secret \"D6CisvAYgkCvc2xwCdnKg6wDR3ExRo/xWF2UGp3uDFwHzHPmhRwaYFbIxNXiCtAXgBMhH5t7dU59Hjxzfdg60w==\", :access-passphrase \"grm72izkyu6\"}"}],"value":"[:credentials {:access-key \"26c44545d711214302c859ef9eb6e70d\", :access-secret \"D6CisvAYgkCvc2xwCdnKg6wDR3ExRo/xWF2UGp3uDFwHzHPmhRwaYFbIxNXiCtAXgBMhH5t7dU59Hjxzfdg60w==\", :access-passphrase \"grm72izkyu6\"}]"}],"value":"{:credentials {:access-key \"26c44545d711214302c859ef9eb6e70d\", :access-secret \"D6CisvAYgkCvc2xwCdnKg6wDR3ExRo/xWF2UGp3uDFwHzHPmhRwaYFbIxNXiCtAXgBMhH5t7dU59Hjxzfdg60w==\", :access-passphrase \"grm72izkyu6\"}}"}
+;; <=
+
+;; @@
+(def snapshot (gdax/get-product-order-book gdax-client "ETH-USD" :level 3))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-var'>#&#x27;limitless-oasis/snapshot</span>","value":"#'limitless-oasis/snapshot"}
+;; <=
+
+;; @@
+(keys snapshot)
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-unkown'>(:sequence :bids :asks)</span>","value":"(:sequence :bids :asks)"}
+;; <=
+
+;; @@
+(count (:bids snapshot))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-unkown'>21972</span>","value":"21972"}
+;; <=
+
+;; @@
+(count (:asks snapshot))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-unkown'>9380</span>","value":"9380"}
+;; <=
+
+;; @@
+(:sequence snapshot)
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-unkown'>1031456640</span>","value":"1031456640"}
+;; <=
+
+;; @@
+(first (:bids snapshot))
+;; @@
+;; =>
+;;; {"type":"list-like","open":"<span class='clj-vector'>[</span>","close":"<span class='clj-vector'>]</span>","separator":" ","items":[{"type":"html","content":"<span class='clj-string'>&quot;315.78&quot;</span>","value":"\"315.78\""},{"type":"html","content":"<span class='clj-string'>&quot;7.999&quot;</span>","value":"\"7.999\""},{"type":"html","content":"<span class='clj-string'>&quot;11efa763-2635-477a-8e69-de0900317ae4&quot;</span>","value":"\"11efa763-2635-477a-8e69-de0900317ae4\""}],"value":"[\"315.78\" \"7.999\" \"11efa763-2635-477a-8e69-de0900317ae4\"]"}
+;; <=
+
+;; @@
+(first (:asks snapshot))
+;; @@
+;; =>
+;;; {"type":"list-like","open":"<span class='clj-vector'>[</span>","close":"<span class='clj-vector'>]</span>","separator":" ","items":[{"type":"html","content":"<span class='clj-string'>&quot;315.79&quot;</span>","value":"\"315.79\""},{"type":"html","content":"<span class='clj-string'>&quot;0.0916553&quot;</span>","value":"\"0.0916553\""},{"type":"html","content":"<span class='clj-string'>&quot;2faae843-188e-4dc2-ae65-a8d8cb489b3e&quot;</span>","value":"\"2faae843-188e-4dc2-ae65-a8d8cb489b3e\""}],"value":"[\"315.79\" \"0.0916553\" \"2faae843-188e-4dc2-ae65-a8d8cb489b3e\"]"}
+;; <=
+
+;; @@
+
+;; @@
